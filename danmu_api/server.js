@@ -533,12 +533,16 @@ async function startServer() {
     });
   }
 
-  // 启动5321端口的代理服务
-  proxyServer = createProxyServer();
-  const proxyBinding = await listenOnAllInterfaces(proxyServer, 5321, {
-    serviceName: 'proxy server'
-  });
-  console.log(`Proxy server running on http://${formatHostForUrl(proxyBinding.address)}:${proxyBinding.port}`);
+  // 启动5321端口的代理服务（单端口或无特权容器环境冲突时优雅容错，不阻断主服务）
+  try {
+    proxyServer = createProxyServer();
+    const proxyBinding = await listenOnAllInterfaces(proxyServer, 5321, {
+      serviceName: 'proxy server'
+    });
+    console.log(`Proxy server running on http://${formatHostForUrl(proxyBinding.address)}:${proxyBinding.port}`);
+  } catch (proxyErr) {
+    console.warn(`[server] Proxy server 5321 bind failed (${proxyErr.message}), continuing with main server.`);
+  }
 
   // 异步初始化 Bangumi Data 缓存
   setTimeout(() => initBangumiData('node', true).catch(console.error), 1000);
